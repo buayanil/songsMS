@@ -1,4 +1,4 @@
-package com.example.authenticationservice;
+package htwb.ai.authenticationservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
