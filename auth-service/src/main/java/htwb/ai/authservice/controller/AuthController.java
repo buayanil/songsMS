@@ -1,13 +1,9 @@
 package htwb.ai.authservice.controller;
 
-import htwb.ai.authservice.exception.PasswordWrongException;
 import htwb.ai.authservice.exception.UserNotFoundException;
 import htwb.ai.authservice.model.User;
 import htwb.ai.authservice.repository.UserRepository;
-import htwb.ai.authservice.request.AuthRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,46 +23,6 @@ public class AuthController {
     private final UserRepository userRepo;
     public AuthController (UserRepository repo) {
         this.userRepo = repo;
-    }
-
-    @RequestMapping(value="/auths", method=RequestMethod.GET, produces = "text/plain;charset=UTF-8")
-    public Iterable<User> getAllUsers() {
-        return userRepo.findAll();
-    }
-
-    // http://localhost:8080/auth?userId=maxime
-    @RequestMapping(value="/auth", method=RequestMethod.POST, produces = { "application/json", "text/json", "text/plain;charset=UTF-8" })
-    public ResponseEntity<String> returnUser(@RequestParam("userId") String userId, @RequestParam("password") String password) {
-        User user = userRepo.selectUserId(userId);
-        String token;
-
-
-        if (user == null) {
-            throw new UserNotFoundException("User", "userId", userId);
-        }
-        else if (user.getPassword().equals(password)) {
-            System.out.println(user);
-
-
-            boolean isUserInMap = true;
-            for (User tmp : mapToken.values()) {
-                if (tmp.getUserId().equals(user.getUserId())) {
-                    isUserInMap = false;
-                    break;
-                }
-            }
-
-            if (isUserInMap) {
-                token = this.nextToken(user); //generateChecksum(user.getUserId());
-                User userInserted = mapToken.put(token, new User(user.getUserId(), user.getPassword(), user.getFirstName(), user.getLastName()));
-                System.out.println(userInserted);
-            }
-
-            return ResponseEntity.ok(this.nextToken(user));
-        }
-        else {
-            throw new PasswordWrongException("User", "password", userId);
-        }
     }
 
     @PostMapping(value = "/auth", consumes = { "application/json", "text/json", "text/plain;charset=UTF-8" }, produces = { "application/json", "text/json", "text/plain;charset=UTF-8" })
@@ -103,49 +59,8 @@ public class AuthController {
             return ResponseEntity.ok(this.nextToken(user));
         }
         else {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            throw new PasswordWrongException("User", "password", user.getUserId());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-    }
-
-    @PostMapping
-    public ResponseEntity<String> login(@RequestBody AuthRequest authRequest) {
-        System.err.println("public ResponseEntity<String> login(@RequestBody AuthRequest authRequest)");
-        // Überprüfen Sie die Benutzeranmeldeinformationen (userId und password)
-        if (isValidCredentials(authRequest.getUserId(), authRequest.getPassword())) {
-            // Generieren Sie den Token für den Benutzer (hier: "qwertyuiiooxd1a245")
-            String token = generateChecksum(authRequest.getUserId());
-            User userInserted = mapToken.put(token, new User(authRequest.getUserId(), authRequest.getPassword(), authRequest.getFirstName(), authRequest.getLastName()));
-            System.out.println(userInserted);
-
-            for (User tmpUser : mapToken.values()) {
-                System.out.println(tmpUser);
-            }
-
-            return ResponseEntity.ok(token);
-        } else {
-            throw new PasswordWrongException("User", "password", authRequest.getUserId());
-            //return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-    }
-
-    @GetMapping("/token")
-    public ResponseEntity<String> exampleEndpoint(@RequestHeader("Authorization") String authorizationHeader) {
-        if (authorizationHeader != null && !authorizationHeader.isEmpty()) {
-            // Token aus dem Authorization-Header extrahieren
-            String token = authorizationHeader;
-
-            // Überprüfe, ob das Token in der ConcurrentHashMap vorhanden ist
-            User user = mapToken.get(token);
-            if (user != null) {
-                // Token ist gültig, füge die Logik hier hinzu...
-                return ResponseEntity.ok("Benutzer " + user.getUserId() + " hat Zugriff.");
-            }
-        }
-
-        // Der Benutzer ist nicht authentifiziert oder das Token ist ungültig
-        // Führen Sie Ihre Fehlerbehandlung durch...
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Nicht autorisiert.");
     }
 
     public boolean checkToken(String token) {
@@ -187,31 +102,6 @@ public class AuthController {
         return mapToken.get(token);
     }
 
-    private boolean isValidCredentials(String userId, String password) {
-        // Überprüfen Sie die Anmeldeinformationen des Benutzers gegen Ihre Datenbank oder einen anderen Mechanismus
-        // Zum Beispiel können Sie eine Liste von Benutzern und deren Passwörtern haben
-        // und überprüfen, ob die eingegebenen Anmeldeinformationen übereinstimmen
-
-        // Beispiel: Benutzer "maxime" mit Passwort "pass1234" ist gültig
-        User tmpUser = userRepo.selectUserId(userId);
-        if (tmpUser != null) {
-            if (tmpUser.getPassword().equals(password)) {
-                System.out.println("true: "+tmpUser);
-                return true;
-            }
-            else {
-                System.out.println("false: "+tmpUser);
-                return false;
-            }
-        }
-        else {
-            System.out.println("false: "+tmpUser);
-            // Wenn die Anmeldeinformationen nicht übereinstimmen, geben Sie false zurück
-            return false;
-        }
-    }
-
-
     private String nextToken(User user) {
         String tmp;
         tmp = generateChecksum(user.getUserId() + user.getPassword());
@@ -246,11 +136,6 @@ public class AuthController {
 
         // Gib den generierten Hex-String zurück
         return hexString.toString();
-    }
-
-    @GetMapping("/message")
-    public String test() {
-        return "Hello JavaInUse Called in Second Service";
     }
 
 }
