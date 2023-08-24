@@ -25,7 +25,7 @@ public class AuthController {
         this.userRepo = repo;
     }
 
-    @PostMapping(value = "/auth", consumes = { "application/json", "text/json", "text/plain;charset=UTF-8" }, produces = { "application/json", "text/json", "text/plain;charset=UTF-8" })
+    @PostMapping(consumes = { "application/json", "text/json", "text/plain;charset=UTF-8" }, produces = { "application/json", "text/json", "text/plain;charset=UTF-8" })
     public ResponseEntity<String> authUser(@RequestBody User user, HttpServletResponse response) {
         System.err.println("public ResponseEntity<String> authUser(@RequestBody User user, HttpServletResponse response)");
         User tmpUser = userRepo.selectUserId(user.getUserId());
