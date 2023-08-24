@@ -63,7 +63,12 @@ public class AuthController {
         }
     }
 
-    public boolean checkToken(String token) {
+    @GetMapping("/checkToken/{token}")
+    public boolean checkToken(@PathVariable String token) {
+        return this.checkMap(token);
+    }
+
+    private boolean checkMap(String token) {
         if (token.startsWith("Bearer ")) {
             token = token.substring(7).trim(); // Extract token value without "Bearer" prefix
         }
