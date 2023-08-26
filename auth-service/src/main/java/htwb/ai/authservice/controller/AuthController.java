@@ -75,7 +75,8 @@ public class AuthController {
         return mapToken.containsKey(token);
     }
 
-    public boolean checkUser(String userId){
+    @GetMapping("/checkUser/{userId}")
+    public boolean checkUser(@PathVariable String userId) {
         Iterable<User> users = userRepo.findAll();
         List<User> userList = new ArrayList<>();
         users.forEach(userList::add);
@@ -88,13 +89,34 @@ public class AuthController {
         return false;
     }
 
-    public User getCurrentUser(String token) {
+    @GetMapping("/getCurrentUser/{authorizationHeader}")
+    public String getCurrentUser(@PathVariable String authorizationHeader) {
+        String token = extractTokenFromHeader(authorizationHeader);
+
+        User user = this.getCurrentUserin(token);
+
+        if (user != null) {
+            return user.getUserId();
+        } else {
+            // Return appropriate response when user is not found
+            // For example, you can throw an exception or return a specific object
+            // This example assumes returning null for simplicity
+            return null;
+        }
+    }
+
+    private String extractTokenFromHeader(String authorizationHeader) {
+        if (authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7).trim(); // Extract token value without "Bearer" prefix
+        }
+        return authorizationHeader.trim();
+    }
+
+
+    private User getCurrentUserin(String token) {
         System.out.printf("TOKEN: %s%n", token);
         System.out.printf("HashMapEmtpy: %s%n", mapToken.isEmpty());
         // Extract the token value without the "Bearer" prefix
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7).trim(); // Extract token value without "Bearer" prefix
-        }
         for (String tmp : mapToken.keySet()) {
             User user = mapToken.get(tmp);
             System.out.printf("TOKENMAP: %s, USER: %s%n", tmp, user);

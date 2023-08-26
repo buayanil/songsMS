@@ -12,4 +12,12 @@ public class ApiService {
     public boolean validateToken(String token) {
         return authServiceClient.checkToken(token);
     }
+
+    public String getCurrentUser(String authorizationHeader){
+        return  authServiceClient.getCurrentUser(authorizationHeader);
+    }
+
+    public boolean checkUser(String userId){
+        return authServiceClient.checkUser(userId);
+    }
 }

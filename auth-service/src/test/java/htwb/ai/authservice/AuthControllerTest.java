@@ -127,7 +127,7 @@ public class AuthControllerTest {
 
 	@Test
 	public void testGetCurrentUserInvalidToken() {
-		User currentUser = userController.getCurrentUser("invalidToken");
+		String currentUser = userController.getCurrentUser("invalidToken");
 
 		assertNull(currentUser);
 	}
