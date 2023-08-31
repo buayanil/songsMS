@@ -28,62 +28,26 @@ public class SongController {
         this.songRepository=songRepository;
     }
 
-    @GetMapping("/validateToken/{token}")
-    public boolean validateToken(@PathVariable String token) {
-        return apiService.validateToken(token);
-    }
-    @GetMapping("/message")
-    public String test() {
-        return "Hello JavaInUse Called in First Service";
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<String> createSongOrSongs(@RequestBody Object requestData, @RequestHeader(value = "Authorization", required = false, defaultValue = "") String authorizationHeader) {
+    public ResponseEntity<String> createSong(@RequestBody Song requestData, @RequestHeader(value = "Authorization", required = false, defaultValue = "") String authorizationHeader) {
         if (authorizationHeader == null || authorizationHeader.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        if (apiService.validateToken(authorizationHeader)) {
-            if (requestData instanceof List) {
-                List<String> createdIds = new ArrayList<>();
-
-                List<?> requestList = (List<?>) requestData;
-                for (Object obj : requestList) {
-                    if (obj instanceof Song) {
-                        Song song = (Song) obj;
-
-                        if (songRepository.existsById(song.getId())) {
-                            return ResponseEntity.badRequest().body("Song with ID " + song.getId() + " already exists.");
-                        }
-
-                        Song savedSong = songRepository.save(song);
-                        createdIds.add(String.valueOf(savedSong.getId()));
-                    } else {
-                        return ResponseEntity.badRequest().body("Invalid request format.");
-                    }
-                }
-
-                // Construct a response or return created IDs
-                String responseMessage = "Batch creation successful. Created IDs: " + String.join(", ", createdIds);
-                return ResponseEntity.ok(responseMessage);
-            } else if (requestData instanceof Song) {
-                Song song = (Song) requestData;
-
-                if (songRepository.existsById(song.getId())) {
-                    return ResponseEntity.badRequest().body("Song with ID " + song.getId() + " already exists.");
-                }
-
-                Song savedSong = songRepository.save(song);
-                String responseMessage = "Song creation successful. Created ID: " + savedSong.getId();
-                return ResponseEntity.ok(responseMessage);
-            } else {
-                return ResponseEntity.badRequest().body("Invalid request format.");
-            }
-        } else {
+        if (!apiService.validateToken(authorizationHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
+        if (songRepository.existsById(requestData.getId())) {
+            return ResponseEntity.badRequest().body("Song with ID " + requestData.getId() + " already exists.");
+        }
+
+        Song savedSong = songRepository.save(requestData);
+        String responseMessage = "Song creation successful. Created ID: " + savedSong.getId();
+        return ResponseEntity.ok(responseMessage);
     }
+
 
 
     @GetMapping
@@ -144,26 +108,7 @@ public class SongController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
-/*
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSong(@PathVariable("id") Long id, @RequestHeader(value = "Authorization", required = false, defaultValue = "") String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        if(apiService.validateToken(authorizationHeader)) {
 
-            Optional<Song> song = songRepository.findById(id);
-            if (song.isPresent()) {
-                songRepository.deleteById(id);
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-    }
-*/
 
 
 }

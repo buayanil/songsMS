@@ -213,13 +213,4 @@ public class PlaylistController {
         }
     }
 
-
-    @GetMapping("/playlists/message")
-    public String test() {
-        return "Hello JavaInUse Called in First Service";
-    }
-    @GetMapping("/playlists/validateToken/{token}")
-    public boolean validateToken(@PathVariable String token) {
-        return apiService.validateToken(token);
-    }
 }
