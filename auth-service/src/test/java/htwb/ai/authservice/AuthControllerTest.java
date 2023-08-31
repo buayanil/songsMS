@@ -12,12 +12,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class AuthControllerTest {
@@ -55,7 +58,7 @@ public class AuthControllerTest {
 		mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userRepository)).build();
 		String requestBody = "{\"userId\": \"" + userId + "\", \"password\": \"" + password + "\"}";
 
-		mockMvc.perform(post("/auth/auth")
+		mockMvc.perform(post("/auth")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody))
 				.andExpect(status().isOk());
@@ -75,7 +78,7 @@ public class AuthControllerTest {
 		mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userRepository)).build();
 		String requestBody = "{\"userId\": \"" + userId + "\", \"password\": \"" + password + "\"}";
 
-		mockMvc.perform(post("/auth/auth")
+		mockMvc.perform(post("/auth")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody))
 				.andExpect(status().isUnauthorized());
@@ -95,74 +98,92 @@ public class AuthControllerTest {
 
 		String requestBody = "{\"userId\": \"" + userId + "\", \"password\": \"" + wrongPassword + "\"}";
 
-		mockMvc.perform(post("/auth/auth")
+		mockMvc.perform(post("/auth")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody))
 				.andExpect(status().isUnauthorized());// Assuming PasswordWrongException returns a 400 Bad Request
 	}
 
-	@Test
-	public void testCheckTokenInvalidToken() {
-		assertFalse(userController.checkToken("invalidToken"));
+	private void setMapTokenField(Map<String, User> newMap) throws Exception {
+		Field mapTokenField = AuthController.class.getDeclaredField("mapToken");
+		mapTokenField.setAccessible(true);
+		mapTokenField.set(userController, newMap);
+	}
+
+	private void restoreOriginalMapTokenField() throws Exception {
+		Field mapTokenField = AuthController.class.getDeclaredField("mapToken");
+		mapTokenField.setAccessible(true);
+		mapTokenField.set(userController, new ConcurrentHashMap<>());
 	}
 
 	@Test
-	public void testCheckUserExistingUser() {
-		List<User> userList = new ArrayList<>();
-		User existingUser = new User("sampleUserId", "samplePassword", "Sample", "User");
-		userList.add(existingUser);
+	public void testCheckToken() throws Exception {
+		String validToken = "sampleToken"; // This should be a valid token in your mapToken
+		String invalidToken = "invalidToken";
 
-		when(userRepository.findAll()).thenReturn(userList);
+		// Simulate the mapToken with a valid token for testing
+		Map<String, User> mapToken = new ConcurrentHashMap<>();
+		User sampleUser = new User("sampleUserId", "samplePassword", "Sample", "User");
+		mapToken.put(validToken, sampleUser);
 
-		assertTrue(userController.checkUser("sampleUserId"));
-	}
+		setMapTokenField(mapToken);
 
+		// Test the checkToken endpoint with valid and invalid tokens
+		mockMvc.perform(get("/auth/checkToken/" + validToken))
+				.andExpect(status().isOk())
+				.andExpect(content().string("true"));
 
-	@Test
-	public void testCheckUserNonExistingUser() {
-		when(userRepository.findAll()).thenReturn(new ArrayList<>()); // Mock empty user list for simplicity
+		mockMvc.perform(get("/auth/checkToken/" + invalidToken))
+				.andExpect(status().isOk())
+				.andExpect(content().string("false"));
 
-		assertFalse(userController.checkUser("nonExistingUserId"));
-	}
-
-	@Test
-	public void testGetCurrentUserInvalidToken() {
-		String currentUser = userController.getCurrentUser("invalidToken");
-
-		assertNull(currentUser);
-	}
-
-	@Test
-	public void testUserFoundInMap() {
-		String userId = "sampleUserId";
-
-		boolean isUserInMap = false;
-		for (User tmp : mapToken.values()) {
-			if (tmp.getUserId().equals(userId)) {
-				System.out.printf("### USER FOUND: %s ###%n", tmp.getUserId());
-				isUserInMap = true;
-				break;
-			}
-		}
-
-		assertTrue(isUserInMap);
+		// Restore the original mapToken field state
+		restoreOriginalMapTokenField();
 	}
 
 	@Test
-	public void testUserNotFoundInMap() {
-		String userId = "nonExistentUser";
+	public void testCheckUser() throws Exception {
+		String existingUserId = "sampleUserId"; // A user ID that should exist in your mocked data
+		String nonExistingUserId = "nonExistingUser"; // A user ID that should not exist in your mocked data
 
-		boolean isUserInMap = false;
-		for (User tmp : mapToken.values()) {
-			if (tmp.getUserId().equals(userId)) {
-				System.out.printf("### USER FOUND: %s ###%n", tmp.getUserId());
-				isUserInMap = true;
-				break;
-			}
-		}
+		when(userRepository.findAll()).thenReturn(Arrays.asList(new User(existingUserId, "password", "Sample", "User")));
 
-		assertFalse(isUserInMap);
+		mockMvc.perform(get("/auth/checkUser/" + existingUserId))
+				.andExpect(status().isOk())
+				.andExpect(content().string("true"));
+
+		mockMvc.perform(get("/auth/checkUser/" + nonExistingUserId))
+				.andExpect(status().isOk())
+				.andExpect(content().string("false"));
 	}
+
+	@Test
+	public void testGetCurrentUser() throws Exception {
+		String validToken = "sampleToken"; // This should be a valid token in your mapToken
+		String invalidToken = "invalidToken";
+
+		when(userRepository.selectUserId("sampleUserId")).thenReturn(new User("sampleUserId", "samplePassword", "Sample", "User"));
+
+		// Simulate the mapToken with a valid token for testing
+		Field mapTokenField = AuthController.class.getDeclaredField("mapToken");
+		mapTokenField.setAccessible(true);
+		ConcurrentHashMap<String, User> mapToken = new ConcurrentHashMap<>();
+		User sampleUser = new User("sampleUserId", "samplePassword", "Sample", "User");
+		mapToken.put(validToken, sampleUser);
+		mapTokenField.set(userController, mapToken);
+
+		// Test the getCurrentUser endpoint with valid and invalid tokens
+		mockMvc.perform(get("/auth/getCurrentUser/Bearer " + validToken))
+				.andExpect(status().isOk())
+				.andExpect(content().string("sampleUserId"));
+
+		mockMvc.perform(get("/auth/getCurrentUser/Bearer " + invalidToken))
+				.andExpect(status().isOk())
+				.andExpect(content().string("")); // Adjust this based on your controller logic
+	}
+
+
+
 
 }
 
