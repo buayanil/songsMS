@@ -153,6 +153,10 @@ public class PlaylistController {
 
     @DeleteMapping("playlists/{id}")
     public ResponseEntity<Void> deletePlaylist(@PathVariable("id") int id, @RequestHeader(value = "Authorization", required = false, defaultValue = "") String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         if (apiService.validateToken(authorizationHeader)) {
             String currentUser = apiService.getCurrentUser(authorizationHeader);
             Optional<Playlist> playlistOptional = playlistRepository.findById(id);
@@ -187,16 +191,37 @@ public class PlaylistController {
                     // Update the playlist properties based on the payload
                     String name = (String) payload.get("name");
                     boolean isPrivate = (boolean) payload.get("isPrivate");
-                    List<Map<String, Object>> songList = (List<Map<String, Object>>) payload.get("songList");
+                    List<Map<String, Object>> songListData = (List<Map<String, Object>>) payload.get("songList");
 
-                    // You can update the playlist properties here as needed
+                    // Check if songListData is not null and update the playlist's songList
+                    if (songListData != null) {
+                        Set<Song> updatedSongList = new HashSet<>();
 
-                    // Save the updated playlist
+                        for (Map<String, Object> songData : songListData) {
+                            long songId = ((Number) songData.get("id")).longValue();
+
+                            // Retrieve the song from the database using songId
+                            Optional<Song> optionalSong = songRepository.findById(songId);
+
+                            if (optionalSong.isPresent()) {
+                                // If the song exists, add it to the updatedSongList
+                                updatedSongList.add(optionalSong.get());
+                            } else {
+                                // Handle the case when the song with the given ID does not exist
+                                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                            }
+                        }
+
+                        // Update the playlist's songList
+                        playlist.setSongs(updatedSongList);
+                    }
+
+                    // Update other properties as needed (name, isPrivate, etc.)
                     playlist.setName(name);
                     playlist.setPrivate(isPrivate);
                     // Update other properties as needed
 
-                    // Save the playlist
+                    // Save the updated playlist
                     playlistRepository.save(playlist);
 
                     return ResponseEntity.noContent().build();
@@ -212,5 +237,6 @@ public class PlaylistController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
+
 
 }
