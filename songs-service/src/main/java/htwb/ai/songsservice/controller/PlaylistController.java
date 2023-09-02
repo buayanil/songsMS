@@ -238,5 +238,20 @@ public class PlaylistController {
         }
     }
 
+    @GetMapping("/playlists/isPrivate/{id}")
+    public boolean isPrivate(@PathVariable("id") int id){
+        return playlistRepository.findById(id).get().isPrivate();
+    }
+
+    @GetMapping("/playlists/getOwner/{id}")
+    public String getOwner(@PathVariable("id") int id){
+        return playlistRepository.findById(id).get().getUserid();
+    }
+
+    @GetMapping("playlists/isPlaylistExistById/{id}")
+    public boolean isPlaylistExistById(@PathVariable("id")int id){
+        return playlistRepository.existsById(id);
+    }
+
 
 }

@@ -109,6 +109,11 @@ public class SongController {
         }
     }
 
+    @GetMapping("/isSongExistById/{id}")
+    public boolean isSongExistById(@PathVariable("id")int id){
+        return songRepository.existsById(Long.valueOf(id));
+    }
+
 
 
 }
