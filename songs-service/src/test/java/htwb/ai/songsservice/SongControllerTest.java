@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.util.Arrays;
 import java.util.List;
@@ -438,6 +439,21 @@ public class SongControllerTest {
         String actualToString = song.toString();
 
         assertEquals(expectedToString, actualToString);
+    }
+
+    @Test
+    public void testIsSongExistById() throws Exception {
+        // Arrange
+        int id = 1;
+        when(songRepository.existsById(anyLong())).thenReturn(true);
+
+        // Act and Assert
+        mockMvc.perform(MockMvcRequestBuilders.get("/songs/isSongExistById/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        verify(songRepository, times(1)).existsById(anyLong());
     }
 
 

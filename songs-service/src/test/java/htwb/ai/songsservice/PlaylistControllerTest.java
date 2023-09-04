@@ -841,5 +841,54 @@ public class PlaylistControllerTest {
         // Verify that the songs field in the playlist has been correctly set
         assertEquals(songs, playlist.getSongs());
     }
+
+    @Test
+    public void testIsPrivate() throws Exception {
+        int playlistId = 1;
+
+        // Mock the behavior of the playlistRepository to return a Playlist with isPrivate true
+        Playlist existingPlaylist = new Playlist.Builder()
+                .isPrivate(true)
+                .name("Old Playlist Name")
+                .user("CurrentUser123") // Same owner as the current user
+                .songs(new HashSet<>()) // Add songs if needed
+                .build();
+        Mockito.when(playlistRepository.findById(1)).thenReturn(Optional.of(existingPlaylist));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/songs/playlists/isPrivate/{id}", playlistId))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string("true"));
+    }
+
+
+    @Test
+    public void testIsPlaylistExistById() throws Exception {
+        int playlistId = 1;
+
+        // Mock the behavior of the playlistRepository to return a Playlist with the given ID
+        Mockito.when(playlistRepository.existsById(playlistId)).thenReturn(true);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/songs/playlists/isPlaylistExistById/{id}", playlistId))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string("true"));
+    }
+
+    @Test
+    public void testGetOwner() throws Exception {
+        int playlistId = 1;
+
+        // Mock the behavior of the playlistRepository to return a Playlist with a specific user ID
+        Playlist existingPlaylist = new Playlist.Builder()
+                .isPrivate(true)
+                .name("Old Playlist Name")
+                .user("CurrentUser123") // Same owner as the current user
+                .songs(new HashSet<>()) // Add songs if needed
+                .build();
+        Mockito.when(playlistRepository.findById(1)).thenReturn(Optional.of(existingPlaylist));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/songs/playlists/getOwner/{id}", playlistId))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string("CurrentUser123"));
+    }
 }
 

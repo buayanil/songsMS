@@ -182,8 +182,33 @@ public class AuthControllerTest {
 				.andExpect(content().string("")); // Adjust this based on your controller logic
 	}
 
+	@Test
+	public void testUserFoundInMap() throws Exception {
+		// Create a user and add it to the mapToken
+		User sampleUser = new User("sampleUserId", "samplePassword", "Sample", "User");
 
+		// Use reflection to modify the private mapToken field temporarily
+		Field mapTokenField = AuthController.class.getDeclaredField("mapToken");
+		mapTokenField.setAccessible(true); // Allow access to the private field
+		Map<String, User> mapToken = new ConcurrentHashMap<>();
+		mapToken.put("sampleToken", sampleUser);
+		mapTokenField.set(userController, mapToken); // Set the modified mapToken
 
+		// Mock the userRepo.selectUserId method to return the sampleUser
+		when(userRepository.selectUserId("sampleUserId")).thenReturn(sampleUser);
 
+		String requestBody = "{\"userId\": \"sampleUserId\", \"password\": \"samplePassword\"}";
+
+		mockMvc.perform(post("/auth")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody))
+				.andExpect(status().isOk());
+
+		// Verify that the "USER FOUND" message is printed (customize this part based on your controller logic)
+		// You can add more assertions or verifications as needed
+
+		// Reset the mapToken field to its original state
+		mapTokenField.set(userController, new ConcurrentHashMap<>());
+	}
 }
 

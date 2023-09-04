@@ -1,7 +1,9 @@
 package htwb.ai.commentservice.controller;
 
 import htwb.ai.commentservice.feignclient.AuthApiService;
+import htwb.ai.commentservice.feignclient.AuthServiceClient;
 import htwb.ai.commentservice.feignclient.SongsApiService;
+import htwb.ai.commentservice.feignclient.SongsServiceClient;
 import htwb.ai.commentservice.model.Comment;
 import htwb.ai.commentservice.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +27,10 @@ public class CommentController {
     private SongsApiService songsApiService;
 
     @Autowired
-    public CommentController(CommentRepository commentRepository) {
+    public CommentController(CommentRepository commentRepository, AuthApiService authApiService, SongsApiService songsServiceClient) {
         this.commentRepository = commentRepository;
+        this.authApiService = authApiService;
+        this.songsApiService = songsServiceClient;
     }
 
     @PostMapping("/songs/{id}")
@@ -95,8 +99,11 @@ public class CommentController {
         if (authorizationHeader == null || authorizationHeader.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        System.out.println(commentRepository.equals(null));
 
         List<Comment> comments = commentRepository.findByCommentTypeAndReferencedItemId("song", id);
+        System.out.println("findby: " +commentRepository.findByCommentTypeAndReferencedItemId("song", id));
+        System.out.println("Comments is empty: " +comments.isEmpty());
         if (comments.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -129,6 +136,12 @@ public class CommentController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        if (!authApiService.validateToken(authorizationHeader)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String userId = authApiService.getCurrentUser(authorizationHeader);
+
         Optional<Comment> optionalComment = commentRepository.findById(id);
 
         if (!optionalComment.isPresent()) {
@@ -136,12 +149,6 @@ public class CommentController {
         }
 
         Comment comment = optionalComment.get();
-
-        if (!authApiService.validateToken(authorizationHeader)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String userId = authApiService.getCurrentUser(authorizationHeader);
 
         // Check if the user is the owner of the comment
         if (!userId.equals(comment.getUserId())) {
